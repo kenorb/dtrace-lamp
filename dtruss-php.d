@@ -7,7 +7,7 @@
 
 #pragma D option quiet
 
-unsigned long long indent;
+unsigned long long depth;
 
 dtrace:::BEGIN {
     total = 0;
@@ -21,7 +21,7 @@ dtrace:::BEGIN {
  */
 php*:::execute-entry
 {
-    printf("%Y: PHP execute-entry:       %*s%s %s:%d\n", walltimestamp, indent, "", "->", basename(copyinstr(arg0)), (int)arg1);
+    printf("%Y: PHP execute-entry:       %*s%s %s:%d\n", walltimestamp, depth, "", "->", basename(copyinstr(arg0)), (int)arg1);
 }
 
 /*
@@ -30,7 +30,7 @@ php*:::execute-entry
  */
 php*:::execute-return
 {
-    printf("%Y: PHP execute-return:      %*s%s %s:%d\n", walltimestamp, indent, "", "<-", basename(copyinstr(arg0)), (int)arg1);
+    printf("%Y: PHP execute-return:      %*s%s %s:%d\n", walltimestamp, depth, "", "<-", basename(copyinstr(arg0)), (int)arg1);
 }
 
 /*
@@ -39,7 +39,7 @@ php*:::execute-return
  */
 php*:::function-entry
 {
-    printf("%Y: PHP function-entry:      %*s%s %s%s%s() in %s:%d\n", walltimestamp, indent, "", "->", copyinstr(arg3), copyinstr(arg4), copyinstr(arg0), basename(copyinstr(arg1)), (int)arg2);
+    printf("%Y: PHP function-entry:      %*s%s %s%s%s() in %s:%d\n", walltimestamp, ++depth/2, "", "->", copyinstr(arg3), copyinstr(arg4), copyinstr(arg0), basename(copyinstr(arg1)), (int)arg2);
     self->vts = timestamp;
     self->cmd = arg3
 }
@@ -59,8 +59,8 @@ php*:::function-return
     @proctime[pid,uid,execname,curpsinfo->pr_psargs] = sum(this->time/1000);
 */
     /* tcpu = lquantize((vtimestamp - self->vts) / 1000, 0, 10000, 10); */
-    /* printf("%Y: PHP function-return:     %*s%s %s%s%s() in %s:%d (%dusec)\n", walltimestamp, indent, "", "<-", copyinstr(arg3), copyinstr(arg4), copyinstr(arg0), basename(copyinstr(arg1)), (int)arg2, (timestamp-ts_start)/1000); */
-    printf("%Y: PHP function-return:     %*s%s %s%s%s() in %s:%d\n", walltimestamp, indent, "", "<-", copyinstr(arg3), copyinstr(arg4), copyinstr(arg0), basename(copyinstr(arg1)), (int)arg2);
+    /* printf("%Y: PHP function-return:     %*s%s %s%s%s() in %s:%d (%dusec)\n", walltimestamp, depth, "", "<-", copyinstr(arg3), copyinstr(arg4), copyinstr(arg0), basename(copyinstr(arg1)), (int)arg2, (timestamp-ts_start)/1000); */
+    printf("%Y: PHP function-return:     %*s%s %s%s%s() in %s:%d\n", walltimestamp, depth--/2, "", "<-", copyinstr(arg3), copyinstr(arg4), copyinstr(arg0), basename(copyinstr(arg1)), (int)arg2);
     self->vts = 0; /* Frees the "ts" thread-local variable. */
     self->cmd = 0;
 }
@@ -71,7 +71,7 @@ php*:::function-return
  */
 php*:::compile-file-entry
 {
-    printf("%Y: PHP compile-file-entry:  %*s%s %s (%s)\n", walltimestamp, indent++, "", "=>", basename(copyinstr(arg0)), basename(copyinstr(arg1)));
+    printf("%Y: PHP compile-file-entry:  %*s%s %s (%s)\n", walltimestamp, depth++, "", "=>", basename(copyinstr(arg0)), basename(copyinstr(arg1)));
 }
 
 /*
@@ -80,7 +80,7 @@ php*:::compile-file-entry
  */
 php*:::compile-file-return
 {
-    printf("%Y: PHP compile-file-return: %*s%s %s (%s)\n", walltimestamp, --indent, "", "<=", basename(copyinstr(arg0)), basename(copyinstr(arg1)));
+    printf("%Y: PHP compile-file-return: %*s%s %s (%s)\n", walltimestamp, --depth, "", "<=", basename(copyinstr(arg0)), basename(copyinstr(arg1)));
 }
 
 /*
@@ -89,8 +89,8 @@ php*:::compile-file-return
  */
 php*:::request-startup
 {
-    indent--;
-    printf("%Y, PHP request-startup:     %*s%s %s at %s via %s\n", walltimestamp, indent++, "", "=>", basename(copyinstr(arg0)), copyinstr(arg1), copyinstr(arg2));
+    depth--;
+    printf("%Y, PHP request-startup:     %*s%s %s at %s via %s\n", walltimestamp, depth++, "", "=>", basename(copyinstr(arg0)), copyinstr(arg1), copyinstr(arg2));
 }
 
 /*
@@ -99,7 +99,7 @@ php*:::request-startup
  */
 php*:::request-shutdown
 {
-    printf("%Y: PHP request-shutdown:    %*s%s %s at %s via %s\n", walltimestamp, --indent, "", "<=", basename(copyinstr(arg0)), copyinstr(arg1), copyinstr(arg2));
+    printf("%Y: PHP request-shutdown:    %*s%s %s at %s via %s\n", walltimestamp, --depth, "", "<=", basename(copyinstr(arg0)), copyinstr(arg1), copyinstr(arg2));
 }
 
 /*
@@ -108,7 +108,7 @@ php*:::request-shutdown
  */
 php*:::exception-thrown
 {
-    printf("%Y: PHP exception-thrown:    %*s%s %s\n", walltimestamp, indent, "", "=>", copyinstr(arg0));
+    printf("%Y: PHP exception-thrown:    %*s%s %s\n", walltimestamp, depth, "", "=>", copyinstr(arg0));
 }
 
 /*
@@ -117,7 +117,7 @@ php*:::exception-thrown
  */
 php*:::exception-caught
 {
-    printf("%Y: PHP exception-caught:    %*s%s %s\n", walltimestamp, indent, "", "<=", copyinstr(arg0));
+    printf("%Y: PHP exception-caught:    %*s%s %s\n", walltimestamp, depth, "", "<=", copyinstr(arg0));
 }
 
 /*
