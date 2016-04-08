@@ -1,4 +1,6 @@
 #!/usr/sbin/dtrace -qws
+# Usage: dtrace -s watch.d -p `pgrep -x mysqld`
+
 /*
  * DTrace script to trace MySQL.
  * See: https://dev.mysql.com/tech-resources/articles/getting_started_dtrace_saha.html
@@ -87,4 +89,17 @@ mysql*:::connection-done
 
   printf ("Connection with ID: %u closed.\nTotal Bytes transferred: %u \nTotal connection time (ms): %-9d\n\n",self>conn_id, self->bytes_read + self->bytes_write,(timestamp-self->client_connect_start)/1000000 );
 
+}
+
+pid$target:::entry
+/self->start/
+{
+   trace(timestamp);
+
+}
+
+pid$target:::return
+/self->start/
+{
+   trace(timestamp);
 }
